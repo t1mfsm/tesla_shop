@@ -72,8 +72,13 @@ ORDERS = [
 
 
 def main(request):
+    query = request.GET.get('query', '').lower() if request.GET.get('query') else None
+    if query:
+        products = [product for product in PRODUCTS if query in product['name'].lower()]
+    else:
+        products = PRODUCTS
 
-    return render(request, 'main.html', {'products': PRODUCTS})
+    return render(request, 'main.html', {'products': products, 'query': query})
 
 
 def product_detail(request, product_id):
@@ -106,11 +111,3 @@ def basket(request, order_id):
                 ordered_products.append(product_with_quantity)
 
     return render(request, 'basket.html', {'products': ordered_products, 'order_id': order_id})
-
-def product_search(request):
-    query = request.GET.get('query', '').lower()
-    if query:
-        products = [product for product in PRODUCTS if query in product['name'].lower()]
-    else:
-        products = []
-    return render(request, 'search_results.html', {'products': products, 'query': query})

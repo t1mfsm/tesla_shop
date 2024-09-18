@@ -10,27 +10,7 @@
   </head>
   <body>
     <!-- Header with logo and contact info -->
-    <div class="header">
-      <a href="{% url 'main' %}">
-        <img src="{% static 'img/logo.png' %}" class="logo" />
-      </a>
-      <div class="contact-info">
-        <div class="phone-number">
-          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
-          <div class="phone-text">
-            <div>Запчасти Tesla</div>
-            <div>+7 (985) 491-15-22</div>
-          </div>
-        </div>
-        <div class="phone-number">
-          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
-          <div class="phone-text">
-            <div>Запчасти Tesla</div>
-            <div>+7 (499) 120-27-10</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% include 'header.html' %}
 
     <!-- Search -->
     <div class="container-fluid">
@@ -61,16 +41,6 @@
 
         <div class="col-md-3">
           <div class="search-cart-container">
-            <!-- Search Bar -->
-            <form method="GET" action="{% url 'product_search' %}">
-              <div class="search-bar">
-                <input type="text" name="query" class="search-input" placeholder="Введите название" />
-                <div class="search-icon">
-                  <img src="{% static 'img/search-icon.svg' %}"/>
-                </div>
-              </div>
-            </form>
-            
             <!-- Cart Icon and Count -->
             <div class="cart">
               <a href="{% url 'basket' 1 %}">

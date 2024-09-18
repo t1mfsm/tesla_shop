@@ -10,71 +10,72 @@
   </head>
   <body>
     <!-- Header with logo and contact info -->
-    <div class="header">
-      <a href="{% url 'main' %}">
-        <img src="{% static 'img/logo.png' %}" class="logo" />
-      </a>
-      <div class="contact-info">
-        <div class="phone-number">
-          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
-          <div class="phone-text">
-            <div>Запчасти Tesla</div>
-            <div>+7 (985) 491-15-22</div>
-          </div>
-        </div>
-        <div class="phone-number">
-          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
-          <div class="phone-text">
-            <div>Запчасти Tesla</div>
-            <div>+7 (499) 120-27-10</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% include 'header.html' %}
 
     <!-- Search -->
     <div class="container-fluid">
-
       <div class="row">
         <div class="col-md-1"></div>
 
         <div class="col-md-7">
           <div class="product-list">
-            {% for product in products %}
-              <div class="product-card">
-                <img class="image" src="{{ product.image }}">
-                <div class="mt-0 mb-0 product-info">
-                  <div class="product-name"><a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">{{ product.name }}</a></div>
-                  <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
-                  <div class="product-model">{{ product.model_info }}</div>
-                  <div class="product-price">{{ product.price }}</div>
+            {% if query %}
+              {% if products %}
+                {% for product in products %}
+                  <div class="product-card">
+                    <img class="image" src="{{ product.image }}">
+                    <div class="mt-0 mb-0 product-info">
+                      <div class="product-name">
+                        <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">{{ product.name }}</a>
+                      </div>
+                      <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
+                      <div class="product-model">{{ product.model_info }}</div>
+                      <div class="product-price">{{ product.price }}</div>
+                    </div>
+                    <div class="add-to-cart-button">В корзину</div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <p>Товары не найдены.</p>
+              {% endif %}
+            {% else %}
+              {% for product in products %}
+                <div class="product-card">
+                  <img class="image" src="{{ product.image }}">
+                  <div class="mt-0 mb-0 product-info">
+                    <div class="product-name">
+                      <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">{{ product.name }}</a>
+                    </div>
+                    <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
+                    <div class="product-model">{{ product.model_info }}</div>
+                    <div class="product-price">{{ product.price }}</div>
+                  </div>
+                  <div class="add-to-cart-button">В корзину</div>
                 </div>
-                <div class="add-to-cart-button">В корзину</div>
-              </div>
-            {% endfor %}
+              {% endfor %}
+            {% endif %}
           </div>
         </div>
 
         <div class="col-md-3">
           <div class="search-cart-container">
             <!-- Search Bar -->
-            <form method="GET" action="{% url 'product_search' %}">
+            <form method="GET" action=".">
               <div class="search-bar">
-                <input type="text color-black" name="query" class="search-input" 
+                <input type="text" name="query" class="search-input" 
                        placeholder="Введите название" value="{{ request.GET.query|default_if_none:'' }}">
                 <div class="search-icon">
                   <img src="{% static 'img/search-icon.svg' %}"/>
                 </div>
               </div>
             </form>
-          
-            
+
             <!-- Cart Icon and Count -->
             <div class="cart">
               <a href="{% url 'basket' 1 %}">
                 <img src="{% static 'img/shopping-cart.svg' %}"/>
               </a>
-              <span class="cart-badge position-absolute top-10 start-40 translate-right %}">0</span>
+              <span class="cart-badge position-absolute top-10 start-40 translate-right">0</span>
             </div>
           </div>
         </div>

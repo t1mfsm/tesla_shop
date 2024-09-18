@@ -1,0 +1,22 @@
+{% load static %}
+<div class="header">
+  <a href="{% url 'main' %}">
+    <img src="{% static 'img/logo.png' %}" class="logo" />
+  </a>
+  <div class="contact-info">
+    <div class="phone-number">
+      <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
+      <div class="phone-text">
+        <div>Запчасти Tesla</div>
+        <div>+7 (985) 491-15-22</div>
+      </div>
+    </div>
+    <div class="phone-number">
+      <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
+      <div class="phone-text">
+        <div>Запчасти Tesla</div>
+        <div>+7 (499) 120-27-10</div>
+      </div>
+    </div>
+  </div>
+</div>
