@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Товары Tesla</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" />
+  </head>
+  <body>
+    <!-- Header with logo and contact info -->
+    <div class="header">
+      <a href="{% url 'main' %}">
+        <img src="{% static 'img/logo.png' %}" class="logo" />
+      </a>
+      <div class="contact-info">
+        <div class="phone-number">
+          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
+          <div class="phone-text">
+            <div>Запчасти Tesla</div>
+            <div>+7 (985) 491-15-22</div>
+          </div>
+        </div>
+        <div class="phone-number">
+          <img src="{% static 'img/phone-call.svg' %}" width="40" height="40" />
+          <div class="phone-text">
+            <div>Запчасти Tesla</div>
+            <div>+7 (499) 120-27-10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-1"></div>
+
+        <div class="col-md-7">
+          <div class="cart-label">
+            <h2>Корзина для заказа № {{ order_id }}</h2>
+          </div>
+          <div class="product-list">
+            {% for product in products %}
+              <div class="product-card">
+                <!-- Изображение товара -->
+                <img class="image" src="{{ product.image }}" alt="{{ product.name }}">
+
+                <!-- Информация о товаре -->
+                <div class="mt-0 mb-0 product-info">
+                  <div class="product-name">
+                    <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">
+                      {{ product.name }}
+                    </a>
+                  </div>
+                  <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
+                  <div class="product-model">{{ product.model_info }}</div>
+                  <div class="product-price">{{ product.price }}</div>
+
+                  <!-- Количество товара -->
+                  <div class="quantity-controls">
+                    <button class="btn-decrement">−</button>
+                    <input type="text" id="quantity-{{ product.id }}" class="quantity-input" value="{{ product.quantity }}" readonly />
+                    <button class="btn-increment">+</button>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+            <div class="total-sum">
+              Итоговая сумма: 7 719 ₽
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="search-cart-container">
+            <!-- Search Bar -->
+            <form method="GET" action="{% url 'product_search' %}">
+              <div class="search-bar">
+                <input type="text" name="query" class="search-input" placeholder="Введите название" />
+                <div class="search-icon">
+                  <img src="{% static 'img/search-icon.svg' %}"/>
+                </div>
+              </div>
+            </form>
+            
+            <!-- Cart Icon and Count -->
+            <div class="cart">
+              <a href="{% url 'basket' 1 %}">
+                <img src="{% static 'img/shopping-cart.svg' %}"/>
+              </a>
+              <span class="cart-badge position-absolute top-10 start-40 translate-right %}">2</span>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-1"></div>
+      </div>
+    </div> 
+  </body>
+</html>

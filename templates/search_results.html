@@ -1,0 +1,27 @@
+{% extends "main.html" %}
+
+{% block content %}
+  <div class="container">
+    <h2>Результаты поиска для "{{ query }}"</h2>
+    <div class="product-list">
+      {% if products %}
+        {% for product in products %}
+          <div class="product-card">
+            <img class="image" src="{{ product.image.url }}">
+            <div class="mt-0 mb-0 product-info">
+              <div class="product-name">
+                <a href="{% url 'product_detail' product.id %}">{{ product.name }}</a>
+              </div>
+              <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
+              <div class="product-model">{{ product.model_info }}</div>
+              <div class="product-price">{{ product.price }}</div>
+            </div>
+            <div class="add-to-cart-button">В корзину</div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>Товары не найдены.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
