@@ -1,6 +1,8 @@
 URL = 'http://127.0.0.1:9000/accessories-electric-cars/{}.jpg'
-from django.shortcuts import render
+from unidecode import unidecode
+from django.shortcuts import render, get_object_or_404
 from django.http import Http404
+from urllib.parse import unquote
 
 PRODUCTS = [
     {   'id': 1,
@@ -120,13 +122,20 @@ def main(request):
     else:
         products = PRODUCTS
 
+    for product in products:
+        product['slug'] = unidecode(product['name']).replace(' ', '-')
+
     return render(request, 'main.html', {'products': products, 'search_product': search_product})
 
 
-def product_detail(request, product_name):  # Убедитесь, что здесь используется 'product_name'
+def product_detail(request, product_name):
+    decoded_product_name = unquote(product_name)
+    
+    decoded_product_name = unidecode(decoded_product_name).lower().replace('-', ' ')
+    
     product = None
     for product_item in PRODUCTS:
-        if product_item['name'].lower() == product_name.lower():
+        if unidecode(product_item['name']).lower() == decoded_product_name:
             product = product_item
             break
 
@@ -134,7 +143,6 @@ def product_detail(request, product_name):  # Убедитесь, что зде�
         raise Http404("Продукт не найден")
 
     return render(request, 'product_detail.html', {'product': product})
-
 
 
 def car_order(request, order_id):
