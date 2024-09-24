@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Товары Tesla</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" />
+  </head>
+  <body>
+    <!-- Header with logo and contact info -->
+    {% include 'header.html' %}
+
+    <!-- Search -->
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-5"></div>
+
+        <div class="col-md-3">
+          <div class="cart-label">
+            <h2>Корзина для заказа № {{ order_id }}</h2>
+          </div>
+          <div class="container-order">
+            <div class="row-order">
+                <div class="label">Завод</div>
+                <div class="value">{{ factory }}</div>
+            </div>
+            <div class="row-order">
+                <div class="label">Дата заказа</div>
+                <div class="value">{{ order_date }}</div>
+            </div>
+            <div class="row-order">
+                <div class="label">Дата доставки</div>
+                <div class="value">{{ ship_date }}</div>
+            </div>
+          </div>
+          <div class="product-list-order">
+            <div class="product-container">
+              {% for product in products %}
+              <div class="product-card-order">
+                <!-- Изображение товара -->
+                <img class="image" src="{{ product.image }}" alt="{{ product.name }}">
+          
+                <!-- Информация о товаре -->
+                <div class="product-info">
+                  <div class="product-name">
+                    <a href="{% url 'product_detail' product.name %}" style="color: black; text-decoration: none;">{{ product.name }}</a>
+                  </div>
+                  <div class="product-price">{{ product.price }}</div>
+                </div>
+              </div>
+          
+              <!-- Количество товара справа -->
+              <div class="quantity-controls">
+                <input type="text" id="quantity-{{ product.id }}" class="quantity-input" value="{{ product.quantity }}" readonly />
+              </div>
+              {% endfor %}
+            </div>
+          
+            <div class="total-sum">
+              Итоговая сумма: 7 719 ₽
+            </div>
+          </div>          
+        </div>
+
+        <div class="col-md-4"></div>
+      </div>
+    </div>
+  </body>
+</html>
