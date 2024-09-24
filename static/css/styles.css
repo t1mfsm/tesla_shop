@@ -90,7 +90,7 @@ body {
   position: absolute;
   top: -10px;
   right: -10px;
-  background-color: #1D00CF;
+  background-color: #3e6ae1;
   color: white;
   border-radius: 50%;
   width: 20px;
@@ -117,50 +117,53 @@ body {
 }
 
 .product-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  justify-items: center;
+  padding: 20px;
+  margin-left: 20px;
 }
 
 .product-card {
-  position: relative;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: flex-start;
   background-color: white;
   border-radius: 10px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin: 20px 0;
-  padding: 20px;
-  width: 90%;
-  max-width: 1200px;
+  width: 346px;
+  height: 351px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .product-card img {
   width: 332px;
   height: 193px;
   border-radius: 10px;
+  margin-left: 7px;
+  margin-top: 8px;
 }
 
 .product-info {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  margin-left: 20px;
   flex-grow: 1;
   font-size: 14px;
   font-family: noto-serif;
+  margin-left: 7px;
+  margin-top: 5px;
 }
 
 .product-price {
-  position: absolute;
-  bottom: 20px;
-  left: 372px;
+  position: relative;
   font-size: 18px;
-  font-family: noto-serif;
   font-weight: bold;
   color: black;
+  margin-top: 15px;
+  margin-bottom: 5px;
 }
 
 .product-name {
@@ -225,6 +228,7 @@ body {
 .product-details img {
   width: 400px;
   height: auto;
+  border-radius: 10px;
 }
 
 .info {
@@ -278,7 +282,7 @@ body {
   font-size: 18px;
   font-weight: bold; 
   margin-top: 20px; 
-  margin-left: 55px;
+  margin-left: 35px;
   color: black;
   font-family: noto-serif;
 }
@@ -290,32 +294,6 @@ body {
   }
 }
 
-.quantity-controls {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
-  display: flex;
-  align-items: center;
-}
-
-.quantity-controls button {
-  width: 30px;
-  height: 30px;
-  font-size: 18px;
-  background-color: #1D00CF;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.quantity-controls input {
-  width: 40px;
-  text-align: center;
-  margin: 0 10px;
-  font-family: noto-serif;
-}
-
 .total-sum {
   font-size: 18px;
   font-family: noto-serif;
@@ -325,4 +303,99 @@ body {
   margin-top: 20px;
   color: black;
   border-top: 2px solid #ddd;
+  margin-right: 80px;
+}
+
+.product-list-order {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 20px;
+  justify-items: center;
+  padding: 20px;
+  margin-right: 100px;
+}
+
+.product-container {
+  display: grid;
+  grid-template-columns: 3fr 1fr; /* Левая часть - карточка, правая - количество */
+  gap: 20px;
+  align-items: start;
+}
+
+.container-order {
+  background-color: #ffffff;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-left: 55px;
+  width: 400px;
+}
+
+.row-order {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+}
+
+.label {
+  font-size: 16px;
+  font-family: noto-serif;
+  text-align: right;
+  margin-right: 20px;
+  width: 100px;
+}
+
+.value {
+  background-color: white;
+  border-radius: 15px;
+  padding: 5px 15px;
+  font-size: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  text-align: center;
+  font-family: noto-serif;
+}
+
+
+.product-card-order {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 346px;
+  height: 300px;
+  box-sizing: border-box;
+}
+
+.product-card-order img {
+  width: 332px;
+  height: 193px;
+  border-radius: 10px;
+  margin-left: 7px;
+  margin-top: 8px;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.quantity-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 134px;
+}
+
+.quantity-input {
+  width: 50px;
+  height: 32px;
+  text-align: center;
+  font-size: 16px;
+  padding: 5px;
 }
