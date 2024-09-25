@@ -182,9 +182,10 @@ body {
 
 .add-to-cart-button {
   position: absolute;
-  right: 20px;
-  bottom: 20px;
-  background-color: #1D00CF;
+  right: 7px;
+  bottom: 7px;
+  background-color: #3e6ae1;
+  border: none;
   color: white;
   text-align: center;
   padding: 10px 20px;
@@ -192,10 +193,16 @@ body {
   cursor: pointer;
   transition: background-color 0.3s;
   font-family: noto-serif;
+  margin-top: 50px;
 }
 
 .add-to-cart-button:hover {
-  background-color: #1D00CF;
+  background-color: #4125e2; /* Темный красный цвет при наведении */
+}
+
+/* Эффект при нажатии */
+.add-to-cart-button:active {
+  background-color: #0e31a3; /* Еще более темный цвет при нажатии */
 }
 
 .product-detail-container {
@@ -252,7 +259,7 @@ body {
 }
 
 .add-to-cart {
-  background-color: #1D00CF;
+  background-color: #3e6ae1;
   color: white;
   border: none;
   padding: 10px 20px;
@@ -263,7 +270,7 @@ body {
 }
 
 .add-to-cart:hover {
-  background-color: #1D00CF;
+  background-color: #3e6ae1;
 }
 
 .note {
@@ -398,4 +405,26 @@ body {
   text-align: center;
   font-size: 16px;
   padding: 5px;
+}
+
+.delete-order-btn {
+  background-color: #e74c3c;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+  font-family: noto-serif;
+  margin-top: 15px;
+  width: 130px;
+  height: 44px;
+}
+
+.delete-order-btn:hover {
+  background-color: #c0392b;
+}
+
+.delete-order-btn:active {
+  background-color: #a93226;
 }

@@ -27,14 +27,18 @@
                     <img class="image" src="{{ product.image }}">
                     <div class="mt-0 mb-0 product-info">
                       <div class="product-name">
-                        <a href="{% url 'product_detail' product.slug %}" style="color: black; text-decoration: none;">
+                        <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">
                           {{ product.name }}
-                        </a>
+                        </a>                       
                       </div>                     
                       <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
                       <div class="product-model">{{ product.model_info }}</div>
-                      <div class="product-price">{{ product.price }}</div>
+                      <div class="product-price">{{ product.price }} ₽</div>
                     </div>
+                    <form method="POST" action="{% url 'add_to_order' product.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="add-to-cart-button">В корзину</button>
+                    </form>
                   </div>
                 {% endfor %}
               {% else %}
@@ -46,14 +50,18 @@
                   <img class="image" src="{{ product.image }}">
                   <div class="mt-0 mb-0 product-info">
                     <div class="product-name">
-                      <a href="{% url 'product_detail' product.slug %}" style="color: black; text-decoration: none;">
+                      <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">
                         {{ product.name }}
-                      </a>
+                      </a>                     
                     </div>                                                                           
                     <div class="product-part-number">Номер запчасти: {{ product.part_number }}</div>
                     <div class="product-model">{{ product.model_info }}</div>
-                    <div class="product-price">{{ product.price }}</div>
+                    <div class="product-price">{{ product.price }} ₽</div>
                   </div>
+                  <form method="POST" action="{% url 'add_to_order' product.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="add-to-cart-button">В корзину</button>
+                  </form>
                 </div>
               {% endfor %}
             {% endif %}
@@ -72,15 +80,24 @@
                 </div>
               </div>
             </form>
-
+          
             <!-- Cart Icon and Count -->
-            <div class="cart">
-              <a href="{% url 'car_order' 'order_1' %}">
+            {% if has_order and current_order.id %}
+              <div class="cart">
+                <a href="{% url 'car_order' current_order.id %}">
+                  <img src="{% static 'img/shopping-cart.svg' %}"/>
+                </a>
+                <span class="cart-badge position-absolute top-10 start-40 translate-right">
+                  {{ current_order.order_products.count }} <!-- Количество товаров в корзине -->
+                </span>
+              </div>
+            {% else %}
+              <div class="cart disabled">
                 <img src="{% static 'img/shopping-cart.svg' %}"/>
-              </a>
-              <span class="cart-badge position-absolute top-10 start-40 translate-right">2</span>
-            </div>
-          </div>
+                <span class="cart-badge position-absolute top-10 start-40 translate-right">0</span>
+              </div>
+            {% endif %}
+          </div>          
         </div>
       </div>
     </div>

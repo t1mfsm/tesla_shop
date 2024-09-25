@@ -38,33 +38,38 @@
           <div class="product-list-order">
             <div class="product-container">
               {% for product in products %}
-              <div class="product-card-order">
-                <!-- Изображение товара -->
-                <img class="image" src="{{ product.image }}" alt="{{ product.name }}">
-          
-                <!-- Информация о товаре -->
-                <div class="product-info">
-                  <div class="product-name">
-                    <a href="{% url 'product_detail' product.name %}" style="color: black; text-decoration: none;">{{ product.name }}</a>
+                <div class="product-card-order">
+                  <img class="image" src="{{ product.image }}" alt="{{ product.name }}">
+                  <div class="product-info">
+                    <div class="product-name">
+                      <a href="{% url 'product_detail' product.id %}" style="color: black; text-decoration: none;">{{ product.name }}</a>
+                    </div>
+                    <div class="product-price">{{ product.price }} ₽</div>
                   </div>
-                  <div class="product-price">{{ product.price }}</div>
                 </div>
-              </div>
-          
-              <!-- Количество товара справа -->
-              <div class="quantity-controls">
-                <input type="text" id="quantity-{{ product.id }}" class="quantity-input" value="{{ product.quantity }}" readonly />
-              </div>
+                
+                <div class="quantity-controls">
+                  <input type="text" id="quantity-{{ product.id }}" class="quantity-input" value="{{ product.quantity }}" readonly />
+                </div>
               {% endfor %}
             </div>
           
             <div class="total-sum">
-              Итоговая сумма: 7 719 ₽
+              Итоговая сумма: {{ total_sum }} ₽
             </div>
+            
           </div>          
         </div>
 
-        <div class="col-md-4"></div>
+        <div class="col-md-2"></div>
+        <div class="col-md-2">
+          <form method="POST" action="{% url 'delete_order' current_order.id %}">
+            {% csrf_token %}
+            <button type="submit" class="delete-order-btn">
+                Удалить заказ
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   </body>
