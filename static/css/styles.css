@@ -197,12 +197,11 @@ body {
 }
 
 .add-to-cart-button:hover {
-  background-color: #4125e2; /* Темный красный цвет при наведении */
+  background-color: #4125e2;
 }
 
-/* Эффект при нажатии */
 .add-to-cart-button:active {
-  background-color: #0e31a3; /* Еще более темный цвет при нажатии */
+  background-color: #0e31a3;
 }
 
 .product-detail-container {
