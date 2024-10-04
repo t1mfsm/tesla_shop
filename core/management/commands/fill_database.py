@@ -222,12 +222,12 @@ class Command(BaseCommand):
             creator = users[index % len(users)]  # Назначаем по одному из созданных пользователей на каждый заказ
 
             order, created = Order.objects.get_or_create(
-                pk=order_data['order_id'],
                 order_date=order_date,
                 ship_date=ship_date,
                 factory=order_data['factory'],
                 creator=creator
             )
+
             if created:
                 self.stdout.write(self.style.SUCCESS(f'Order {order.pk} created by {creator.username}.'))
             else:
@@ -239,8 +239,7 @@ class Command(BaseCommand):
                 order_product, created = OrderProduct.objects.get_or_create(
                     order=order,
                     product=product,
-                    quantity=item_data['quantity'],
-                    user=creator
+                    quantity=item_data['quantity']
                 )
                 if created:
                     self.stdout.write(self.style.SUCCESS(

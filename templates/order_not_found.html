@@ -1,0 +1,21 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Товары Tesla</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" />
+  </head>
+  <body>
+    {% include 'header.html' %}
+    <div class="error-container">
+        <div class="error-box">
+            <h1>Ошибка</h1>
+            <p>{{ message }}</p>
+            <a href="/" class="back-home-btn">Вернуться на главную</a>
+        </div>
+    </div>
+  </body>
+</html>
