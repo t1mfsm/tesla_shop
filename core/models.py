@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.crypto import get_random_string
 
-# Product status choices
 class ProductStatus(models.TextChoices):
     AVAILABLE = 'available', 'Available'
     UNAVAILABLE = 'unavailable', 'Unavailable'
