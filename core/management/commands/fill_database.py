@@ -83,6 +83,7 @@ PRODUCTS = [
 ORDERS = [
     {
         'order_id': 1,
+        'order_number': 'eDUDmd1n7c',
         'order_date': '12.09.2024',
         'ship_date': '15.09.2024',
         'factory': 'Lathrop',
@@ -99,6 +100,7 @@ ORDERS = [
     },
     {
         'order_id': 2,
+        'order_number': 'aN6zlwDbfh',
         'order_date': '24.09.2024',
         'ship_date': '26.09.2024',
         'factory': 'Fremont',
@@ -115,6 +117,7 @@ ORDERS = [
     },
     {
         'order_id': 3,
+        'order_number': 'gYwHiiYtqS',
         'order_date': '25.09.2024',
         'ship_date': '28.09.2024',
         'factory': 'Nevada',
@@ -135,6 +138,7 @@ ORDERS = [
     },
     {
         'order_id': 4,
+        'order_number': 'S0DOHugwQd',
         'order_date': '12.09.2024',
         'ship_date': '30.09.2024',
         'factory': 'New York',
@@ -155,6 +159,7 @@ ORDERS = [
     },
     {
         'order_id': 5,
+        'order_number': 'XNK6A0bL82',
         'order_date': '20.09.2024',
         'ship_date': '25.09.2024',
         'factory': 'Shanghai',
@@ -222,10 +227,13 @@ class Command(BaseCommand):
             creator = users[index % len(users)]  # Назначаем по одному из созданных пользователей на каждый заказ
 
             order, created = Order.objects.get_or_create(
-                order_date=order_date,
-                ship_date=ship_date,
-                factory=order_data['factory'],
-                creator=creator
+                order_number=order_data['order_number'],  # Уникальный ключ
+                defaults={
+                    'order_date': order_date,
+                    'ship_date': ship_date,
+                    'factory': order_data['factory'],
+                    'creator': creator
+                }
             )
 
             if created:

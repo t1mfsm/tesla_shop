@@ -5,7 +5,7 @@ from urllib.parse import unquote
 from django.utils.timezone import now
 from django.contrib import messages
 from django.db import connection
-from django.db.models import F
+from django.db.models import F, Sum
 
 def add_product_to_order(request, product_id):
     product = get_object_or_404(Product, id=product_id)
@@ -20,14 +20,13 @@ def add_product_to_order(request, product_id):
         }
     )
 
-    order_product, created = OrderProduct.objects.get_or_create(
-        order=order, product=product,
-        defaults={'quantity': 1}
-    )
+    order_product_exists = OrderProduct.objects.filter(order=order, product=product).exists()
 
-    if not created:
-        order_product.quantity = F('quantity') + 1
-        order_product.save()
+    if order_product_exists:
+        messages.warning(request, 'Товар уже добавлен в корзину.')
+    else:
+        OrderProduct.objects.create(order=order, product=product, quantity=1)
+        messages.success(request, 'Товар добавлен в корзину.')
 
     return redirect('main')
 
@@ -61,7 +60,7 @@ def main(request):
 
     if user.is_authenticated:
         current_order = Order.objects.filter(creator=user, status='draft').first()
-        has_order = current_order is not None and current_order.id is not None  # Check if the order exists
+        has_order = current_order is not None and current_order.id is not None
     else:
         current_order = None
         has_order = False

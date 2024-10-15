@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 
 # Product status choices
 class ProductStatus(models.TextChoices):
@@ -36,9 +37,11 @@ class OrderStatus(models.TextChoices):
 
 class Order(models.Model):
     id = models.AutoField(primary_key=True)
+    order_number = models.CharField(max_length=20, unique=True, null=False, default=uuid.uuid4().hex[:10])
     order_date = models.DateField()
     ship_date = models.DateField(blank=True, null=True)
     factory = models.CharField(max_length=255)
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, null=False, default=0.00)
     creator = models.ForeignKey(User, related_name='created_orders', on_delete=models.CASCADE)
     moderator = models.ForeignKey(User, related_name='moderated_orders', on_delete=models.CASCADE, blank=True, null=True)
     status = models.CharField(
