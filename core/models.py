@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.crypto import get_random_string
 
 # Product status choices
 class ProductStatus(models.TextChoices):
@@ -17,7 +18,7 @@ class Product(models.Model):
     article_number = models.CharField(max_length=50)
     brand = models.CharField(max_length=50)
     note = models.TextField(blank=True, null=True)
-    image = models.CharField(max_length=255)
+    image = models.CharField(max_length=255, blank=True)
     status = models.CharField(
         max_length=15,
         choices=ProductStatus.choices,
@@ -36,9 +37,11 @@ class OrderStatus(models.TextChoices):
 
 class Order(models.Model):
     id = models.AutoField(primary_key=True)
+    order_number = models.CharField(max_length=20, unique=True, blank=True)
     order_date = models.DateField()
     ship_date = models.DateField(blank=True, null=True)
     factory = models.CharField(max_length=255)
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     creator = models.ForeignKey(User, related_name='created_orders', on_delete=models.CASCADE)
     moderator = models.ForeignKey(User, related_name='moderated_orders', on_delete=models.CASCADE, blank=True, null=True)
     status = models.CharField(
@@ -46,6 +49,11 @@ class Order(models.Model):
         choices=OrderStatus.choices,
         default=OrderStatus.DRAFT
     )
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            self.order_number = get_random_string(10)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Order {self.id} - {self.status}"

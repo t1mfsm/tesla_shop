@@ -97,9 +97,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
         # 'rest_framework.authentication.SessionAuthentication',
     ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ]
 }
 
 # Password validation

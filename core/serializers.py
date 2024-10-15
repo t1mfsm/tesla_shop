@@ -5,7 +5,7 @@ from .models import Product, Order, OrderProduct
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ['id', 'name', 'part_number', 'price', 'model_info', 'year', 'model', 'article_number', 'brand', 'note', 'image', 'status']
+        fields = ['id', 'name', 'part_number', 'price', 'model_info', 'year', 'model', 'article_number', 'brand', 'note', 'image']
 
 class OrderProductSerializer(serializers.ModelSerializer):
     product = ProductSerializer()
@@ -19,7 +19,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['id', 'order_date', 'ship_date', 'factory', 'creator', 'moderator', 'status', 'order_products']
+        fields = ['id', 'order_number', 'order_date', 'ship_date', 'factory', 'total_cost', 'creator', 'moderator', 'status', 'order_products']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
