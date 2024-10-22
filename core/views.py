@@ -68,16 +68,17 @@ class ProductListCreate(APIView):
             products = products.filter(name__icontains=name)
 
         user = UserSingleton.get_instance()
-        draft_order_id = None
+        car_order_id = None
         if user:
-            draft_order = Order.objects.filter(creator=user, status='draft').first()
-            if draft_order:
-                draft_order_id = draft_order.id
+            car_order = Order.objects.filter(creator=user, status='draft').first()
+            if car_order:
+                car_order_id = car_order.id
 
         serializer = self.serializer_class(products, many=True)
         response_data = {
-            'products': serializer.data,
-            'draft_order_id': draft_order_id
+            'details': serializer.data,
+            'car_order_id': car_order_id,
+            'count_details': len(serializer.data)
         }
         return Response(response_data, status=status.HTTP_200_OK)
 
@@ -202,7 +203,9 @@ class OrderList(APIView):
             orders = orders.filter(status=status)
 
         serialized_orders = [
-            {**self.serializer_class(order).data, 'creator': order.creator.username, 'moderator': order.moderator.username if order.moderator else None}
+            {**self.serializer_class(order, exclude_fields=['order_products']).data,
+             'creator': order.creator.username,
+             'moderator': order.moderator.username if order.moderator else None}
             for order in orders
         ]
 
@@ -243,6 +246,15 @@ class OrderDetail(APIView):
         data['creator'] = order.creator.username
         if order.moderator:
             data['moderator'] = order.moderator.username
+        for order_product in data.get('order_products', []):
+            product_data = order_product.get('product', {})
+            filtered_product_data = {
+                'name': product_data.get('name'),
+                'price': product_data.get('price'),
+                'image': product_data.get('image')
+            }
+            order_product['product'] = filtered_product_data
+            order_product.pop('id', None)
         return Response(data)
 
     # PUT: Изменение доп. полей заявки или изменение заявки модератором
