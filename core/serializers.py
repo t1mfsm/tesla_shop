@@ -19,7 +19,7 @@ class OrderSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Order
-        fields = ['id', 'order_number', 'order_date', 'ship_date', 'factory', 'total_cost', 'creator', 'moderator', 'status', 'order_products']
+        fields = ['id', 'order_number', 'creation_date', 'order_date', 'ship_date', 'factory', 'total_cost', 'creator', 'moderator', 'status', 'order_products']
 
     def __init__(self, *args, **kwargs):
         exclude_fields = kwargs.pop('exclude_fields', None)

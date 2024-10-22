@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from minio import Minio
 from django.http import Http404
+from datetime import datetime
 from rest_framework.response import *
 
 class UserSingleton:
@@ -195,9 +196,18 @@ class OrderList(APIView):
         orders = self.model_class.objects.filter(creator=user).exclude(status__in=[OrderStatus.DRAFT, OrderStatus.CANCELLED])
 
         if date_from:
-            orders = orders.filter(order_date__gte=date_from)
+            try:
+                date_from = datetime.strptime(date_from, '%Y-%m-%d')  # Пример: '2024-10-22'
+                orders = orders.filter(order_date__date__gte=date_from)
+            except ValueError:
+                return Response({"error": "Invalid date_from format. Use 'YYYY-MM-DD'."}, status=400)
+
         if date_to:
-            orders = orders.filter(order_date__lte=date_to)
+            try:
+                date_to = datetime.strptime(date_to, '%Y-%m-%d')
+                orders = orders.filter(order_date__date__lte=date_to)
+            except ValueError:
+                return Response({"error": "Invalid date_to format. Use 'YYYY-MM-DD'."}, status=400)
 
         if status:
             orders = orders.filter(status=status)
@@ -272,7 +282,7 @@ class OrderDetail(APIView):
             updated_data = request.data.copy()
             updated_data['total_cost'] = total_cost
 
-            order.ship_date = timezone.now().date()
+            order.ship_date = timezone.now()
 
             serializer = self.serializer_class(order, data=updated_data, partial=True)
             if serializer.is_valid():

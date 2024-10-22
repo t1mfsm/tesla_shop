@@ -37,12 +37,13 @@ class OrderStatus(models.TextChoices):
 class Order(models.Model):
     id = models.AutoField(primary_key=True)
     order_number = models.CharField(max_length=20, unique=True, blank=True)
-    order_date = models.DateField()
-    ship_date = models.DateField(blank=True, null=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+    order_date = models.DateTimeField()
+    ship_date = models.DateTimeField(blank=True, null=True)
     factory = models.CharField(max_length=255)
-    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    creator = models.ForeignKey(User, related_name='created_orders', on_delete=models.CASCADE)
-    moderator = models.ForeignKey(User, related_name='moderated_orders', on_delete=models.CASCADE, blank=True, null=True)
+    total_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Общая сумма
+    creator = models.ForeignKey(User, related_name='created_orders', on_delete=models.CASCADE)  # Создатель
+    moderator = models.ForeignKey(User, related_name='moderated_orders', on_delete=models.CASCADE, blank=True, null=True)  # Модератор
     status = models.CharField(
         max_length=15,
         choices=OrderStatus.choices,
