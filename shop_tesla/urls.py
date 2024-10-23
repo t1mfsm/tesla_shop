@@ -1,9 +1,26 @@
 from django.contrib import admin
 from django.urls import include, path
 from core import views
-from rest_framework import routers
+from rest_framework import routers, permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+schema_view = get_schema_view(
+   openapi.Info(
+      title="Snippets API",
+      default_version='v1',
+      description="Test description",
+      terms_of_service="https://www.google.com/policies/terms/",
+      contact=openapi.Contact(email="contact@snippets.local"),
+      license=openapi.License(name="BSD License"),
+   ),
+   public=True,
+   permission_classes=(permissions.AllowAny,),
+)
 
 router = routers.DefaultRouter()
+router.register(r'user', views.UserViewSet, basename='user')
+
 urlpatterns = [
     path('', include(router.urls)),
     path('details/', views.ProductListCreate.as_view(), name='product-list-create'),
@@ -13,7 +30,14 @@ urlpatterns = [
     path('car_orders/', views.OrderList.as_view(), name='car_order-list'),
     path('car_orders/<int:pk>/', views.OrderDetail.as_view(), name='car_order-detail'),
     path('car_orders/<int:order_id>/details/<int:product_id>/', views.OrderProductDetail.as_view(), name='car_order-product-detail'),
-    path('users/<str:action>/', views.UserView.as_view(), name='user-action'),
+    path('car_orders/<int:pk>/edit/', views.OrderDetail.as_view(), name='order-detail-edit'),
+    path('car_orders/<int:pk>/form/', views.OrderDetail.as_view(), name='order-detail-form'),
+    path('car_orders/<int:pk>/complete/', views.OrderDetail.as_view(), name='order-detail-complete'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
+    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('users/auth/', views.UserViewSet.as_view({'post': 'create'}), name='user-register'),
+    path('login/',  views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('users/profile/', views.UserViewSet.as_view({'put': 'profile'}), name='user-profile')
 ]

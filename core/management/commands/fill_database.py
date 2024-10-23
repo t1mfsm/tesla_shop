@@ -1,6 +1,6 @@
 URL = 'http://127.0.0.1:9000/accessories-electric-cars/{}.jpg'
 from django.core.management.base import BaseCommand
-from core.models import Product, Order, OrderProduct
+from core.models import CustomUser, Product, Order, OrderProduct
 from django.contrib.auth.models import User
 from datetime import datetime
 from django.utils.crypto import get_random_string
@@ -83,8 +83,7 @@ PRODUCTS = [
 ORDERS = [
     {
         'order_id': 1,
-        'order_date': '12.09.2024',
-        'ship_date': '15.09.2024',
+        'order_number': 'eDUDmd1n7c',
         'factory': 'Lathrop',
         'items': [
             {
@@ -99,8 +98,7 @@ ORDERS = [
     },
     {
         'order_id': 2,
-        'order_date': '24.09.2024',
-        'ship_date': '26.09.2024',
+        'order_number': 'k23jtjd8lK',
         'factory': 'Fremont',
         'items': [
             {
@@ -115,8 +113,7 @@ ORDERS = [
     },
     {
         'order_id': 3,
-        'order_date': '25.09.2024',
-        'ship_date': '28.09.2024',
+        'order_number': 'ocK7KDM39x',
         'factory': 'Nevada',
         'items': [
             {
@@ -135,8 +132,7 @@ ORDERS = [
     },
     {
         'order_id': 4,
-        'order_date': '12.09.2024',
-        'ship_date': '30.09.2024',
+        'order_number': 'okmfOJMD09',
         'factory': 'New York',
         'items': [
             {
@@ -155,8 +151,7 @@ ORDERS = [
     },
     {
         'order_id': 5,
-        'order_date': '20.09.2024',
-        'ship_date': '25.09.2024',
+        'order_number': 'o49fjlOIE9',
         'factory': 'Shanghai',
         'items': [
             {
@@ -179,23 +174,39 @@ class Command(BaseCommand):
     help = 'Populates the database with initial data, including users, products, and orders'
 
     def handle(self, *args, **kwargs):
-        # Создание 5 пользователей
         users = []
-        for i in range(1, 6):
-            username = f'user{i}'
+        for i in range(1, 11):
+            email = f'user{i}@example.com'
             password = get_random_string(8)
-            user, created = User.objects.get_or_create(
-                username=username
+            user, created = CustomUser.objects.get_or_create(
+                email=email
             )
             if created:
                 user.set_password(password)
                 user.save()
-                self.stdout.write(self.style.SUCCESS(f'User "{username}" created with password: {password}'))
+                if i == 9 or i == 10:
+                    user.is_staff = True
+                    user.save()
+                self.stdout.write(self.style.SUCCESS(f'User "{email}" created with password: {password}'))
             else:
-                self.stdout.write(self.style.WARNING(f'User "{username}" already exists.'))
+                self.stdout.write(self.style.WARNING(f'User "{email}" already exists.'))
             users.append(user)
 
-        # Создание продуктов
+        email = 'tim@tim.com'
+        password = '123'
+        user, created = CustomUser.objects.get_or_create(
+            email=email,
+            defaults={'password': password}
+        )
+        if created:
+            user.set_password(password)
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+            self.stdout.write(self.style.SUCCESS(f'User "{user.email}" created with password "{password}".'))
+        else:
+            self.stdout.write(self.style.WARNING(f'User "{user.email}" already exists.'))
+
         for product_data in PRODUCTS:
             product, created = Product.objects.get_or_create(
                 name=product_data['name'],
@@ -214,26 +225,28 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(self.style.WARNING(f'Product "{product.name}" already exists.'))
 
-        # Создание заказов и привязка к пользователям
         for index, order_data in enumerate(ORDERS):
-            order_date = datetime.strptime(order_data['order_date'], '%d.%m.%Y').date()
-            ship_date = datetime.strptime(order_data['ship_date'], '%d.%m.%Y').date()
-
-            creator = users[index % len(users)]  # Назначаем по одному из созданных пользователей на каждый заказ
-
+            order_date = datetime.now()
+            ship_date = datetime.now()
+            creator = users[index % len(users)]
             order, created = Order.objects.get_or_create(
-                order_date=order_date,
-                ship_date=ship_date,
-                factory=order_data['factory'],
-                creator=creator
+                order_number=order_data['order_number'],
+                defaults={
+                    'order_date': order_date,
+                    'ship_date': ship_date,
+                    'factory': order_data['factory'],
+                    'total_cost': 0.00,
+                    'creator': creator,
+                    'moderator': None,
+                    'status': 'draft',
+                    'creation_date': datetime.now(),
+                }
             )
-
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Order {order.pk} created by {creator.username}.'))
+                self.stdout.write(self.style.SUCCESS(f'Order {order.pk} created by {creator.email}.'))
             else:
                 self.stdout.write(self.style.WARNING(f'Order {order.pk} already exists.'))
 
-            # Создание продуктов для заказа
             for item_data in order_data['items']:
                 product = Product.objects.get(pk=item_data['product_id'])
                 order_product, created = OrderProduct.objects.get_or_create(

@@ -1,9 +1,11 @@
+import uuid
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from .models import Product, Order, OrderProduct, OrderStatus
+from core.permissions import IsAdmin, IsManager
+from .models import Product, Order, OrderProduct, OrderStatus, CustomUser
 from .serializers import ProductSerializer, OrderSerializer, OrderProductSerializer, UserSerializer
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
@@ -13,22 +15,42 @@ from minio import Minio
 from django.http import Http404
 from datetime import datetime
 from rest_framework.response import *
+from drf_yasg.utils import swagger_auto_schema
+from rest_framework.viewsets import ModelViewSet
+from django.contrib.auth import authenticate, login, logout
+from django.http import HttpResponse
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
+import redis
 
-class UserSingleton:
-    _instance = None
+session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            try:
-                cls._instance = User.objects.get(id=3)
-            except User.DoesNotExist:
-                cls._instance = None
-        return cls._instance
+def method_permission_classes(classes):
+    def decorator(func):
+        def decorated_func(self, *args, **kwargs):
+            self.permission_classes = classes        
+            self.check_permissions(self.request)
+            return func(self, *args, **kwargs)
+        return decorated_func
+    return decorator
 
-    @classmethod
-    def clear_instance(cls, user):
-        pass
+
+# class UserSingleton:
+#     _instance = None
+
+#     @classmethod
+#     def get_instance(cls):
+#         if cls._instance is None:
+#             try:
+#                 cls._instance = User.objects.get(id=3)
+#             except User.DoesNotExist:
+#                 cls._instance = None
+#         return cls._instance
+
+#     @classmethod
+#     def clear_instance(cls, user):
+#         pass
 
 def process_file_upload(file_object: InMemoryUploadedFile, client, image_name):
     try:
@@ -68,7 +90,7 @@ class ProductListCreate(APIView):
         if name:
             products = products.filter(name__icontains=name)
 
-        user = UserSingleton.get_instance()
+        user = request.user
         car_order_id = None
         if user:
             car_order = Order.objects.filter(creator=user, status='draft').first()
@@ -84,6 +106,8 @@ class ProductListCreate(APIView):
         return Response(response_data, status=status.HTTP_200_OK)
 
     # POST: Добавление новой услуги
+    @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def post(self, request, format=None):
         data = request.data.copy()
         data.pop('image', None) 
@@ -104,6 +128,8 @@ class ProductDetail(APIView):
         return Response(serializer.data)
 
     # PUT: Обновление услуги
+    @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def put(self, request, pk, format=None):
         product = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(product, data=request.data, partial=True)
@@ -113,6 +139,7 @@ class ProductDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # DELETE: Удаление услуги и её изображения
+    @method_permission_classes([IsManager])
     def delete(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
         product.image = ''  # Удаляем изображение
@@ -127,6 +154,8 @@ class ProductDetail(APIView):
         raise Http404
     
     # POST: Изменение фото услуги
+    @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def update_image(self, request, pk):
         product = get_object_or_404(self.model_class, pk=pk)
         pic = request.FILES.get("image")
@@ -157,8 +186,9 @@ class ProductDetail(APIView):
         return Response({"message": "Изображение успешно обновлено.", "photo_url": pic_url}, status=status.HTTP_200_OK)
 
     # POST: Добавленеи услуги в заявку-черновик
+    @swagger_auto_schema(request_body=serializer_class)
     def add_to_draft(self, request, pk):
-        user = UserSingleton.get_instance()
+        user = request.user
         if not user:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
@@ -187,62 +217,46 @@ class OrderList(APIView):
 
     # GET: Список заявок
     def get(self, request, format=None):
-        user = UserSingleton.get_instance()
+        user = request.user
+        if user.is_authenticated:
+            date_from = request.query_params.get('date_from')
+            date_to = request.query_params.get('date_to')
+            status = request.query_params.get('status')
 
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        status = request.query_params.get('status')
+            if user.is_authenticated:
+                if user.is_staff:
+                    orders = self.model_class.objects.all().exclude(status__in=['del'])
+                else:
+                    orders = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
+            else:
+                return Response({"error": "Вы не авторизованы"}, status=401)
+            
+            if date_from:
+                try:
+                    date_from = datetime.strptime(date_from, '%Y-%m-%d')  # Пример: '2024-10-22'
+                    orders = orders.filter(order_date__date__gte=date_from)
+                except ValueError:
+                    return Response({"error": "Invalid date_from format. Use 'YYYY-MM-DD'."}, status=400)
 
-        orders = self.model_class.objects.filter(creator=user).exclude(status__in=[OrderStatus.DRAFT, OrderStatus.CANCELLED])
+            if date_to:
+                try:
+                    date_to = datetime.strptime(date_to, '%Y-%m-%d')
+                    orders = orders.filter(order_date__date__lte=date_to)
+                except ValueError:
+                    return Response({"error": "Invalid date_to format. Use 'YYYY-MM-DD'."}, status=400)
 
-        if date_from:
-            try:
-                date_from = datetime.strptime(date_from, '%Y-%m-%d')  # Пример: '2024-10-22'
-                orders = orders.filter(order_date__date__gte=date_from)
-            except ValueError:
-                return Response({"error": "Invalid date_from format. Use 'YYYY-MM-DD'."}, status=400)
+            if status:
+                orders = orders.filter(status=status)
 
-        if date_to:
-            try:
-                date_to = datetime.strptime(date_to, '%Y-%m-%d')
-                orders = orders.filter(order_date__date__lte=date_to)
-            except ValueError:
-                return Response({"error": "Invalid date_to format. Use 'YYYY-MM-DD'."}, status=400)
+            serialized_orders = [
+                {**self.serializer_class(order, exclude_fields=['order_products']).data,
+                'creator': order.creator.email,
+                'moderator': order.moderator.email if order.moderator else None}
+                for order in orders
+            ]
 
-        if status:
-            orders = orders.filter(status=status)
-
-        serialized_orders = [
-            {**self.serializer_class(order, exclude_fields=['order_products']).data,
-             'creator': order.creator.username,
-             'moderator': order.moderator.username if order.moderator else None}
-            for order in orders
-        ]
-
-        return Response(serialized_orders)
-    
-    # PUT: Создание заявки
-    def put(self, request, format=None):
-        user = UserSingleton.get_instance()
-        required_fields = ['order_number']
-        for field in required_fields:
-            if field not in request.data or request.data[field] is None:
-                return Response({field: 'Это поле обязательно для заполнения.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        order_id = request.data.get('id')
-        if order_id:
-            order = get_object_or_404(self.model_class, pk=order_id)
-            serializer = self.serializer_class(order, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save(moderator=user)
-                return Response(serializer.data)
-
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            order = serializer.save(creator=user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(serialized_orders)
+        return Response(data={"error": "Вы не авторизованы."}, status=401)
 
 class OrderDetail(APIView):
     model_class = Order
@@ -253,9 +267,9 @@ class OrderDetail(APIView):
         order = get_object_or_404(self.model_class, pk=pk)
         serializer = self.serializer_class(order)
         data = serializer.data
-        data['creator'] = order.creator.username
+        data['creator'] = order.creator.email
         if order.moderator:
-            data['moderator'] = order.moderator.username
+            data['moderator'] = order.moderator.email
         for order_product in data.get('order_products', []):
             product_data = order_product.get('product', {})
             filtered_product_data = {
@@ -268,33 +282,98 @@ class OrderDetail(APIView):
         return Response(data)
 
     # PUT: Изменение доп. полей заявки или изменение заявки модератором
-    def put(self, request, pk, format=None):
-        order = get_object_or_404(self.model_class, pk=pk)
-        user = UserSingleton.get_instance()
+    @swagger_auto_schema(request_body=serializer_class)
 
+    def put(self, request, pk, format=None):
+        # Получаем полный путь запроса
+        full_path = request.path
+        print('hello')
+        if full_path.endswith('/form/'):
+            return self.put_creator(request, pk)
+        elif full_path.endswith('/complete/'):
+            return self.put_moderator(request, pk)
+        elif full_path.endswith('/edit/'):
+            return self.put_edit(request, pk)
+
+        return Response({"error": "Неверный путь"}, status=status.HTTP_400_BAD_REQUEST)
+
+    # PUT для создателя: формирование заявки
+    @method_permission_classes([AllowAny]) 
+    def put_creator(self, request, pk):
+        print('hello')
+        dinner = get_object_or_404(self.model_class, pk=pk)
+        user = request.user
+        if user.is_authenticated:
+            if user == dinner.creator:
+
+                # Проверка на обязательные поля
+                
+
+                # Установка статуса 'f' (сформирована) и даты формирования
+                if 'status' in request.data and request.data['status'] == 'shipped':
+                    dinner.formed_at = timezone.now()
+                    updated_data = request.data.copy()
+
+                    serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response(serializer.data)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+                return Response({"error": "Создатель может только формировать заявку."}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({"error": "Отказано в доступе"}, status=status.HTTP_403_FORBIDDEN)        
+        return Response({"error": "Вы не авторизованы"}, status=401)    
+    
+    # PUT для модератора: завершение или отклонение заявки
+    @method_permission_classes([IsManager])  # Разрешаем только модераторам
+    def put_moderator(self, request, pk):
+        dinner = get_object_or_404(self.model_class, pk=pk)
+        user = request.user
+        
         if 'status' in request.data:
             status_value = request.data['status']
 
-            if status_value not in ['shipped', 'received']:
-                return Response({"error": "Неверный статус."}, status=status.HTTP_400_BAD_REQUEST)
+            # Модератор может завершить ('c') или отклонить ('r') заявку
+            if status_value in ['delivered', 'cancelled']:
+                if dinner.status != 'shipped':
+                    return Response({"error": "Заявка должна быть сначала сформирована."}, status=status.HTTP_403_FORBIDDEN)
 
-            total_cost = self.calculate_total_cost(order)
-            updated_data = request.data.copy()
-            updated_data['total_cost'] = total_cost
+                # Установка даты завершения и расчёт стоимости для завершённых заявок
+                if status_value == 'delivered':
+                    real_time = timezone.now()
+                    dinner.completed_at = real_time
+                    total_cost = self.calculate_total_cost(dinner)
+                    updated_data = request.data.copy()
+                    updated_data['total_cost'] = total_cost
 
-            order.ship_date = timezone.now()
+                elif status_value == 'cancelled':
+                    dinner.completed_at = timezone.now()
+                    updated_data = request.data.copy()
 
-            serializer = self.serializer_class(order, data=updated_data, partial=True)
-            if serializer.is_valid():
-                serializer.save(moderator=user)
-                return Response(serializer.data)
+                serializer = self.serializer_class(dinner, data=updated_data, partial=True)
+                if serializer.is_valid():
+                    serializer.save(moderator=user)
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = self.serializer_class(order, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save(moderator=user)
-            return Response(serializer.data)
+        return Response({"error": "Модератор может только завершить или отклонить заявку."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put_edit(self, request, pk):
+        user = request.user
+        if user.is_authenticated:
+            dinner = get_object_or_404(self.model_class, pk=pk)
+
+            if dinner.creator == user:
+                # Обновление дополнительных полей
+                serializer = self.serializer_class(dinner, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Вы не создатель заказа"}, status=403)
+        return Response({"error": "Вы не авторизованы"}, status=401)
 
     def calculate_total_cost(self, order):
         total_cost = 0
@@ -319,6 +398,8 @@ class OrderProductDetail(APIView):
     serializer_class = OrderProductSerializer
 
     # PUT: Изменение доп. поля
+    @swagger_auto_schema(request_body=serializer_class)
+    @method_permission_classes([IsManager])
     def put(self, request, order_id, product_id, format=None):
         order = get_object_or_404(Order, pk=order_id)
         order_product = get_object_or_404(self.model_class, order=order, product__id=product_id)
@@ -337,55 +418,103 @@ class OrderProductDetail(APIView):
         order_product.delete()
         return Response({"message": "Товар успешно удалён из заказа"}, status=status.HTTP_204_NO_CONTENT)
     
-class UserView(APIView):
-    
-    # POST: регистрация, аутентификация и деавторизация пользователя
-    def post(self, request, action, format=None):
-        if action == 'register':
-            serializer = UserSerializer(data=request.data)
-            if serializer.is_valid():
-                validated_data = serializer.validated_data
-                user = User(
-                    username=validated_data['username'],
-                    email=validated_data['email']
-                )
-                user.set_password(request.data.get('password'))
-                user.save()
-                return Response({
-                    'message': 'Регистрация прошла успешно'
-                }, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+class UserViewSet(ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+    model_class = CustomUser
 
-        elif action == 'authenticate':
-            username = request.data.get('username')
-            password = request.data.get('password')
-            user = authenticate(request, username=username, password=password)
-            
-            if user is not None:
-                user_data = UserSerializer(user).data
-                return Response({
-                    'message': 'Аутентификация успешна',
-                    'user': user_data
-                }, status=200)
-            
-            return Response({'error': 'Неправильное имя пользователя или пароль'}, status=400)
+    # def get_permissions(self):
+    #     if self.action in ['create']:
+    #         permission_classes = [AllowAny]
+    #     elif self.action in ['list']:
+    #         permission_classes = [IsAdmin | IsManager]
+    #     else:
+    #         permission_classes = [IsAdmin]
+    #     return [permission() for permission in permission_classes]
 
-        elif action == 'logout':
-            return Response({'message': 'Вы вышли из системы'}, status=200)
+    def get_permissions(self):
+        # Удаляем ненужные проверки, чтобы любой пользователь мог обновить свой профиль
+        if self.action == 'create' or self.action == 'profile':
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
-        return Response({'error': 'Некорректное действие'}, status=400)
+    def create(self, request):
+        if self.model_class.objects.filter(email=request.data['email']).exists():
+            return Response({'status': 'Exist'}, status=400)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            self.model_class.objects.create_user(
+                email=serializer.data['email'],
+                password=serializer.data['password'],
+                is_superuser=serializer.data['is_superuser'],
+                is_staff=serializer.data['is_staff']
+            )
+            return Response({'status': 'Success'}, status=200)
+        return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    # PUT: личный кабинет пользователя
-    def put(self, request, action, format=None):
-        if action == 'profile':
-            user = UserSingleton.get_instance()
-            if user is None:
-                return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
-            
-            serializer = UserSerializer(user, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # Обновление данных профиля пользователя
+    @action(detail=False, methods=['put'], permission_classes=[AllowAny])
+    def profile(self, request, format=None):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        return Response({'error': 'Некорректное действие'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.serializer_class(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# @permission_classes([AllowAny])
+# @authentication_classes([])
+# @csrf_exempt
+# @swagger_auto_schema(method='post', request_body=UserSerializer)
+# @api_view(['POST'])
+# def login_view(request):
+#     email = request.data["email"]
+#     password = request.data["password"]
+#     user = authenticate(request, email=email, password=password)
+#     print(user)
+#     if user is not None:
+#         login(request, user)
+#         return HttpResponse("{'status': 'ok'}")
+#     else:
+#         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+# def logout_view(request):
+#     logout(request._request)
+#     return Response({'status': 'Success'})
+
+@authentication_classes([])
+@swagger_auto_schema(method='post', request_body=UserSerializer)
+@api_view(['Post'])
+@csrf_exempt
+@permission_classes([AllowAny])
+def login_view(request):
+    username = request.data["email"] 
+    password = request.data["password"]
+    print(username)
+    print(password)
+    user = authenticate(request, email=username, password=password)
+    if user is not None:
+        random_key = str(uuid.uuid4())
+        session_storage.set(random_key, username)
+        response = HttpResponse("{'status': 'ok'}")
+        response.set_cookie("session_id", random_key) 
+        return response
+    else:
+        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+
+@swagger_auto_schema(method='post')
+def logout_view(request):
+    if request.user.is_authenticated:
+        session_id = request.COOKIES.get("session_id")
+        if session_id:
+            session_storage.delete(session_id)
+            response = HttpResponse("{'status': 'ok'}")
+            response.delete_cookie("session_id")
+            return response
+        else:
+            return HttpResponse("{'status': 'error', 'error': 'no session found'}")
+    return HttpResponse("{'error': 'Вы не авторизованы'}")
