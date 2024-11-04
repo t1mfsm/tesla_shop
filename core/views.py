@@ -92,16 +92,18 @@ class ProductListCreate(APIView):
 
         user = request.user
         car_order_id = None
-        if user:
+        count_details = 0
+        if user and user.is_authenticated:
             car_order = Order.objects.filter(creator=user, status='draft').first()
             if car_order:
                 car_order_id = car_order.id
+                count_details = car_order.get_total_detail_count()
 
         serializer = self.serializer_class(products, many=True)
         response_data = {
             'details': serializer.data,
             'car_order_id': car_order_id,
-            'count_details': len(serializer.data)
+            'count_details': count_details
         }
         return Response(response_data, status=status.HTTP_200_OK)
 

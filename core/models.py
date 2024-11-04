@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum
 from django.utils.crypto import get_random_string
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, UserManager, BaseUserManager
 
@@ -72,6 +73,7 @@ class OrderStatus(models.TextChoices):
     DELIVERED = 'delivered', 'Delivered'
     CANCELLED = 'cancelled', 'Cancelled'
 
+
 class Order(models.Model):
     id = models.AutoField(primary_key=True)
     order_number = models.CharField(max_length=20, unique=True, blank=True)
@@ -87,6 +89,9 @@ class Order(models.Model):
         choices=OrderStatus.choices,
         default=OrderStatus.DRAFT
     )
+
+    def get_total_detail_count(self):
+        return self.order_products.values('product').distinct().count()
 
     def save(self, *args, **kwargs):
         if not self.order_number:
