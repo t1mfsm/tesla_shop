@@ -27,11 +27,14 @@ urlpatterns = [
     path('api/details/<int:pk>/', views.ProductDetail.as_view(), name='product-detail'),
     path('api/details/<int:pk>/draft/', views.ProductDetail.as_view(), name='product-add-to-draft'),
     path('details/<int:pk>/image/', views.ProductDetail.as_view(), name='product-image-upload'),
-    path('api/car_orders/', views.OrderList.as_view(), name='car_order-list'),
+    path('api/car_orders/', views.OrderList.as_view(), name='get'),
     path('api/car_orders/<int:pk>/', views.OrderDetail.as_view(), name='car_order-detail'),
-    path('car_orders/<int:order_id>/details/<int:product_id>/', views.OrderProductDetail.as_view(), name='car_order-product-detail'),
+    path('api/car_orders/<int:order_id>/details/<int:product_id>/', views.OrderProductDetail.as_view(), name='delete'),
+    path('api/car_orders/<int:order_id>/details/<int:product_id>/', views.OrderProductDetail.as_view(), name='put'),
     path('car_orders/<int:pk>/edit/', views.OrderDetail.as_view(), name='order-detail-edit'),
+
     path('api/car_orders/<int:pk>/form/', views.OrderDetail.as_view(), name='put_creator'),
+
     path('car_orders/<int:pk>/complete/', views.OrderDetail.as_view(), name='order-detail-complete'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),

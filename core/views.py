@@ -219,46 +219,59 @@ class OrderList(APIView):
 
     # GET: Список заявок
     def get(self, request, format=None):
+        # Получаем пользователя из запроса
         user = request.user
-        if user.is_authenticated:
-            date_from = request.query_params.get('date_from')
-            date_to = request.query_params.get('date_to')
-            status = request.query_params.get('status')
 
-            if user.is_authenticated:
-                if user.is_staff:
-                    orders = self.model_class.objects.all().exclude(status__in=['del'])
-                else:
-                    orders = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
-            else:
-                return Response({"error": "Вы не авторизованы"}, status=401)
-            
-            if date_from:
-                try:
-                    date_from = datetime.strptime(date_from, '%Y-%m-%d')  # Пример: '2024-10-22'
-                    orders = orders.filter(order_date__date__gte=date_from)
-                except ValueError:
-                    return Response({"error": "Invalid date_from format. Use 'YYYY-MM-DD'."}, status=400)
+        # Если пользователь не авторизован, возвращаем ошибку
+        if not user.is_authenticated:
+            return Response({"error": "Вы не авторизованы."}, status=401)
+        
+        # Получаем фильтры из query параметров
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        status = request.query_params.get('status')
 
-            if date_to:
-                try:
-                    date_to = datetime.strptime(date_to, '%Y-%m-%d')
-                    orders = orders.filter(order_date__date__lte=date_to)
-                except ValueError:
-                    return Response({"error": "Invalid date_to format. Use 'YYYY-MM-DD'."}, status=400)
+        print(status)
 
-            if status:
-                orders = orders.filter(status=status)
+        # Фильтрация заказов в зависимости от того, является ли пользователь администратором
+        if user.is_staff:
+            orders = self.model_class.objects.all().exclude(status__in=['del'])
+        else:
+            orders = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
 
-            serialized_orders = [
-                {**self.serializer_class(order, exclude_fields=['order_products']).data,
-                'creator': order.creator.email,
-                'moderator': order.moderator.email if order.moderator else None}
-                for order in orders
-            ]
+        # Фильтрация по дате начала
+        if date_from:
+            try:
+                date_from = datetime.strptime(date_from, '%Y-%m-%d')  # Пример: '2024-10-22'
+                orders = orders.filter(order_date__date__gte=date_from)
+            except ValueError:
+                return Response({"error": "Invalid date_from format. Use 'YYYY-MM-DD'."}, status=400)
 
-            return Response(serialized_orders)
-        return Response(data={"error": "Вы не авторизованы."}, status=401)
+        # Фильтрация по дате окончания
+        if date_to:
+            try:
+                date_to = datetime.strptime(date_to, '%Y-%m-%d')
+                orders = orders.filter(order_date__date__lte=date_to)
+            except ValueError:
+                return Response({"error": "Invalid date_to format. Use 'YYYY-MM-DD'."}, status=400)
+
+        # Фильтрация по статусу
+        if status:
+            orders = orders.filter(status=status)
+
+
+        print(orders)
+
+        # Сериализация данных заказов
+        serialized_orders = [
+            {**self.serializer_class(order, exclude_fields=['order_products']).data,
+             'creator': order.creator.email,
+             'moderator': order.moderator.email if order.moderator else None}
+            for order in orders
+        ]
+
+        # Возвращаем отфильтрованные заказы в ответе
+        return Response(serialized_orders)
 
 class OrderDetail(APIView):
     model_class = Order
@@ -301,32 +314,28 @@ class OrderDetail(APIView):
         return Response({"error": "Неверный путь"}, status=status.HTTP_400_BAD_REQUEST)
 
     # PUT для создателя: формирование заявки
-    @method_permission_classes([AllowAny]) 
+    @method_permission_classes([AllowAny])
     def put_creator(self, request, pk):
-        print('hello')
-        dinner = get_object_or_404(self.model_class, pk=pk)
-        user = request.user
-        if user.is_authenticated:
-            if user == dinner.creator:
+      
+        # Получаем заказ по pk
+        order = get_object_or_404(self.model_class, pk=pk)
 
-                # Проверка на обязательные поля
-                
 
-                # Установка статуса 'f' (сформирована) и даты формирования
-                if 'status' in request.data and request.data['status'] == 'shipped':
-                    dinner.formed_at = timezone.now()
-                    updated_data = request.data.copy()
+        if order.status != 'shipped':
+            # Меняем статус на 'shipped'
+            order.status = 'shipped'
+            order.ship_date = timezone.now()  # Добавляем дату отправки
 
-                    serializer = self.serializer_class(dinner, data=updated_data, partial=True)
-                    if serializer.is_valid():
-                        serializer.save()
-                        return Response(serializer.data)
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            # Сохраняем изменения в заказе
+            order.save()
 
-                return Response({"error": "Создатель может только формировать заявку."}, status=status.HTTP_400_BAD_REQUEST)
+            # Сериализуем обновленный заказ и возвращаем ответ
+            serializer = self.serializer_class(order)
+            return Response(serializer.data)
 
-            return Response({"error": "Отказано в доступе"}, status=status.HTTP_403_FORBIDDEN)        
-        return Response({"error": "Вы не авторизованы"}, status=401)    
+        return Response({"error": "Статус уже 'shipped'"}, status=status.HTTP_400_BAD_REQUEST)
+
+
     
     # PUT для модератора: завершение или отклонение заявки
     @method_permission_classes([IsManager])  # Разрешаем только модераторам
@@ -402,7 +411,6 @@ class OrderProductDetail(APIView):
 
     # PUT: Изменение доп. поля
     @swagger_auto_schema(request_body=serializer_class)
-    @method_permission_classes([IsManager])
     def put(self, request, order_id, product_id, format=None):
         order = get_object_or_404(Order, pk=order_id)
         order_product = get_object_or_404(self.model_class, order=order, product__id=product_id)
@@ -414,12 +422,13 @@ class OrderProductDetail(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # DELETE: Удаление детали из заявки
+    @method_permission_classes([AllowAny])
     def delete(self, request, order_id, product_id, format=None):
         order = get_object_or_404(Order, pk=order_id)
         order_product = get_object_or_404(self.model_class, order=order, product__id=product_id)
 
         order_product.delete()
-        return Response({"message": "Товар успешно удалён из заказа"}, status=status.HTTP_204_NO_CONTENT)
+        return Response({"message": "Товар успешно удалён из заказа"}, status=status.HTTP_200_OK)
     
 class UserViewSet(ModelViewSet):
     queryset = CustomUser.objects.all()
