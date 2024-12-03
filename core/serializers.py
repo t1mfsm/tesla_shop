@@ -31,6 +31,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def __init__(self, *args, **kwargs):
         exclude_fields = kwargs.pop('exclude_fields', None)
+        extra_kwargs = {'status': {'required': False}}
         super(OrderSerializer, self).__init__(*args, **kwargs)
 
         if exclude_fields:
@@ -42,4 +43,17 @@ class UserSerializer(serializers.ModelSerializer):
     is_superuser = serializers.BooleanField(default=False, required=False)
     class Meta:
         model = CustomUser
-        fields = ['email', 'password', 'is_staff', 'is_superuser']
+        fields = ['id', 'email', 'password', 'is_staff', 'is_superuser']
+
+    def update(self, instance, validated_data):
+        # Обновление пароля, если он был передан
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+        
+        # Обновление других данных
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance

@@ -160,3 +160,9 @@ CSRF_COOKIE_NAME = 'csrftoken'
 SESSION_COOKIE_NAME = 'sessionid'
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',  # Это адрес вашего фронтенда
+    'http://localhost:3001',  # Если у вас используется https
+]

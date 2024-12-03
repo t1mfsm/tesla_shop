@@ -12,7 +12,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.conf import settings
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from minio import Minio
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from datetime import datetime
 from rest_framework.response import *
 from drf_yasg.utils import swagger_auto_schema
@@ -275,6 +275,7 @@ class OrderDetail(APIView):
         for order_product in data.get('order_products', []):
             product_data = order_product.get('product', {})
             filtered_product_data = {
+                'id': product_data.get('id'),
                 'name': product_data.get('name'),
                 'price': product_data.get('price'),
                 'image': product_data.get('image')
@@ -441,18 +442,37 @@ class UserViewSet(ModelViewSet):
         return [IsAuthenticated()]
 
     def create(self, request):
+        # Проверка, существует ли уже пользователь с таким email
         if self.model_class.objects.filter(email=request.data['email']).exists():
             return Response({'status': 'Exist'}, status=400)
+
+        # Сериализация данных запроса
         serializer = self.serializer_class(data=request.data)
+        
         if serializer.is_valid():
-            self.model_class.objects.create_user(
+            # Создание пользователя с использованием сериализованных данных
+            user = self.model_class.objects.create_user(
                 email=serializer.data['email'],
                 password=serializer.data['password'],
                 is_superuser=serializer.data['is_superuser'],
                 is_staff=serializer.data['is_staff']
             )
-            return Response({'status': 'Success'}, status=200)
+
+            # Подготовка данных о пользователе для ответа
+            response_data = {
+                'id': user.id,
+                'email': user.email,
+                'password': user.password,  # Включаем пароль (не рекомендуется на практике)
+                'is_superuser': user.is_superuser,
+                'is_staff': user.is_staff,
+            }
+
+            # Возвращение успешного ответа с данными о пользователе
+            return Response({'status': 'Success', 'user': response_data})
+
+        # В случае ошибок валидации сериализатора
         return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
 
     # Обновление данных профиля пользователя
     @action(detail=False, methods=['put'], permission_classes=[AllowAny])
@@ -461,10 +481,13 @@ class UserViewSet(ModelViewSet):
         if not user.is_authenticated:
             return Response({'error': 'Вы не авторизованы'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = self.serializer_class(user, data=request.data, partial=True)
+        # Получаем данные для обновления из запроса
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        
         if serializer.is_valid():
-            serializer.save()
+            serializer.save()  # Если данные валидны, сохраняем изменения
             return Response({'message': 'Профиль обновлен', 'user': serializer.data}, status=status.HTTP_200_OK)
+        
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -490,27 +513,39 @@ class UserViewSet(ModelViewSet):
 
 @authentication_classes([])
 @swagger_auto_schema(method='post', request_body=UserSerializer)
-@api_view(['Post'])
+@api_view(['POST'])
 @csrf_exempt
 @permission_classes([AllowAny])
 def login_view(request):
-    username = request.data["email"] 
+    username = request.data["email"]
     password = request.data["password"]
     print(username)
     print(password)
+
+    # Попытка аутентификации пользователя
     user = authenticate(request, email=username, password=password)
+
     if user is not None:
+        # Создаем случайный ключ для сессии
         random_key = str(uuid.uuid4())
-        session_storage.set(random_key, username)
-        response = HttpResponse("{'status': 'ok'}")
-        response.set_cookie("session_id", random_key) 
+        session_storage.set(random_key, username)  # Сохраняем сессию, если нужно
+
+        # Сериализация данных пользователя
+        user_data = UserSerializer(user)  # Сериализация объекта user
+        response_data = user_data.data  # Извлекаем данные в словарь
+
+        # Добавляем session_id в cookies
+        response = JsonResponse({'status': 'ok', 'user': response_data})  # Отправляем данные пользователя
+        response.set_cookie("session_id", random_key)
+
         return response
     else:
-        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+        # Если аутентификация не удалась
+        return JsonResponse({'status': 'error', 'error': 'login failed'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @swagger_auto_schema(method='post')
 def logout_view(request):
-    if request.user.is_authenticated:
+    if request.user:
         session_id = request.COOKIES.get("session_id")
         if session_id:
             session_storage.delete(session_id)
