@@ -237,7 +237,7 @@ class OrderList(APIView):
         if user.is_staff:
             orders = self.model_class.objects.all().exclude(status__in=['del'])
         else:
-            orders = self.model_class.objects.filter(creator=user).exclude(status__in=['dr', 'del'])
+            orders = self.model_class.objects.filter(creator=user).exclude(status__in=['draft', 'del'])
 
         # Фильтрация по дате начала
         if date_from:
