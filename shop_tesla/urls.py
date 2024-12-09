@@ -25,6 +25,9 @@ urlpatterns = [
     path('', include(router.urls)),
     path('api/details/', views.ProductListCreate.as_view(), name='product-list-create'),
     path('api/details/<int:pk>/', views.ProductDetail.as_view(), name='product-detail'),
+    path('api/details/<int:pk>/delete/', views.ProductDetail.as_view(), name='delete'),
+    path('api/details/<int:pk>/update/', views.ProductDetail.as_view(), name='put'),
+    path('api/details/create/', views.ProductListCreate.as_view(), name='post'),
     path('api/details/<int:pk>/draft/', views.ProductDetail.as_view(), name='product-add-to-draft'),
     path('details/<int:pk>/image/', views.ProductDetail.as_view(), name='product-image-upload'),
     path('api/car_orders/', views.OrderList.as_view(), name='get'),
@@ -35,7 +38,7 @@ urlpatterns = [
 
     path('api/car_orders/<int:pk>/form/', views.OrderDetail.as_view(), name='put_creator'),
 
-    path('car_orders/<int:pk>/complete/', views.OrderDetail.as_view(), name='order-detail-complete'),
+    path('api/car_orders/<int:pk>/complete/', views.OrderDetail.as_view(), name='put_moderator'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

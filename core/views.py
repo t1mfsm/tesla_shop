@@ -112,10 +112,14 @@ class ProductListCreate(APIView):
     @method_permission_classes([IsManager])
     def post(self, request, format=None):
         data = request.data.copy()
-        data.pop('image', None) 
+        # data.pop('image', None) 
+        print(data)
+        print('[eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee]')
+       
         serializer = self.serializer_class(data=data)
         if serializer.is_valid():
             product = serializer.save()
+            add_pic(product,data.image)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -140,11 +144,10 @@ class ProductDetail(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # DELETE: Удаление услуги и её изображения
+    # DELETE: Удаление услуги
     @method_permission_classes([IsManager])
     def delete(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
-        product.image = ''  # Удаляем изображение
         product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -342,14 +345,18 @@ class OrderDetail(APIView):
     def put_moderator(self, request, pk):
         dinner = get_object_or_404(self.model_class, pk=pk)
         user = request.user
-        
+
+        print('Received data:', request.data)  # Отладочный вывод данных
+
+        # Убедитесь, что получаете правильные данные
         if 'status' in request.data:
             status_value = request.data['status']
+            print('Status:', status_value)
 
-            # Модератор может завершить ('c') или отклонить ('r') заявку
+            # Обработка логики
             if status_value in ['delivered', 'cancelled']:
-                if dinner.status != 'shipped':
-                    return Response({"error": "Заявка должна быть сначала сформирована."}, status=status.HTTP_403_FORBIDDEN)
+                # if dinner.status != 'shipped':
+                #     return Response({"error": "Заявка должна быть сначала сформирована."}, status=status.HTTP_403_FORBIDDEN)
 
                 # Установка даты завершения и расчёт стоимости для завершённых заявок
                 if status_value == 'delivered':
@@ -370,6 +377,7 @@ class OrderDetail(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"error": "Модератор может только завершить или отклонить заявку."}, status=status.HTTP_400_BAD_REQUEST)
+
 
     def put_edit(self, request, pk):
         user = request.user
